@@ -1,0 +1,20 @@
+@startuml
+title Smart Home System (Context diagram)
+
+top to bottom direction
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Person(user, "Пользователь", "Пользователь системы Smart Home")
+Person(support, "Сотрудник поддержки", "Пользователь системы Smart Home")
+System_Ext(IoTDevice,  "IoT Устройство", "Устройство, подключенное к сети, например, термостат, камера, датчик открытия ворот", "Uses MQTT")
+
+System(SmartHomeSystem, "SmartHome System", "Система управления умным домом на Java")
+ContainerDb(Database, "База данных", "Хранит информацию о пользователях, устройствах и данных сенсоров", "PostgreSQL")
+
+Rel(user, SmartHomeSystem, "Включение/выключение отопления")
+Rel(user, SmartHomeSystem, "Просмотр температуры в доме")
+Rel(support, SmartHomeSystem, "Работа с тикетами пользователей")
+Rel(SmartHomeSystem, Database, "Записывает и читает данные пользователей, настройки и данные сенсоров")
+Rel(SmartHomeSystem, IoTDevice, "Запрашивает и получает данные о температуре")
+@enduml

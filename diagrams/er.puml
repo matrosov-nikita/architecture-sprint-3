@@ -1,0 +1,67 @@
+@startuml
+
+entity "User" as user {
+    *id : INT
+    --
+    name : VARCHAR
+    email : VARCHAR
+}
+
+entity "House" as house {
+    *id : INT
+    --
+    address : TEXT
+}
+
+entity "Device" as device {
+    *id : INT
+    --
+    serial_number: VARCHAR
+    user_id: INT <<FK>>
+    house_id: INT <<FK>>
+    name : VARCHAR
+    created: DATETIME
+    state: VARCHAR
+    device_type_id: INT <<FK>>
+}
+
+entity "DeviceScenario" as device_scenario {
+    *id : INT
+    --
+    scenario_type: INT
+    user_id: INT <<FK>>
+    device_id: INT <<FK>>
+    name : VARCHAR
+    device_scenario_type_id: INT <<FK>>
+}
+
+entity "DeviceScenarioType" as device_scenario_type {
+    *id : INT
+    --
+    details: JSONB
+}
+
+entity "DeviceType" as device_type {
+    *id : INT
+    --
+    manufacturer: VARCHAR
+    model: VARCHAR
+}
+
+entity "DeviceEvent" as device_event {
+    *id : INT
+    --
+    device_id: INT <<FK>>
+    event_type: VARCHAR
+    occured_on: DATETIME
+    details: JSONB
+}
+
+user ||--o{ device: "1:N"
+user ||--o{ house: "1:N"
+device ||--|| device_type : "1:1"
+device ||--o{ device_event : "1:N"
+device ||--o{ device_scenario : "1:N"
+device_scenario ||--|| device_scenario_type : "1:1"
+
+@enduml
