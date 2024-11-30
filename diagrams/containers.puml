@@ -1,0 +1,43 @@
+@startuml
+title Smart Home System (Containers diagram)
+
+top to bottom direction
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Person(user, "Пользователь", "Пользователь системы Smart Home")
+Person(support, "Сотрудник поддержки", "Сотрудник поддержки системы Smart Home")
+System_Ext(IoTDevice, "IoT Устройство", "Устройство, подключенное к сети, например, термостат, камера или датчик открытия ворот")
+
+Container_Boundary(SmartHomeSystem, "SmartHome System") {
+  Container(MobileApp, "Mobile Application", "Kotlin, Swift", "Мобильное приложение через которое пользователь будет взаимодействовать с ситемой")
+  Container(WebApp, "Web Application", "Node.JS", "Веб-приложение через которое пользователь будет взаимодействовать с ситемой")
+  Container(APIGateway, "API Gateway", "Kong", "Входная точка для обработки запроса от пользователя")
+
+  Container(TelemetryService, "Telemetry Service", "Golang", "Сервис обработки и аналитики для событий с устройств")
+  Container(UserService, "User Service", "Golang", "Сервис управления пользователями")
+  Container(NotifyService, "Notify Service", "Golang", "Сервис для уведомлений пользователей о случившихся событиях на устройствах")
+  Container(DeviceService, "Device Service", "Golang", "Сервис управления устройствами")
+  ContainerDb(PG1, "PostgreSQL", "Хранит данные о пользователях")
+  ContainerDb(CH, "ClickHouse", "Хранит события с датчиков устройств")
+  ContainerDb(PG2, "PostgreSQL", "Хранит информацию об устройствах и сценариях пользователя")
+  ContainerDb(Kafka, "Kafka", "Очередь сообщений для событий устройств")
+}
+Rel(user, MobileApp, "Пользователь через интерфейс взаимодействует с системой")
+Rel(support, WebApp, "Работа с тикетами пользователей через веб-интерфейс системы")
+Rel(MobileApp, APIGateway, "Отправляет запрос на API системы", "HTTPS")
+Rel(WebApp, APIGateway, "Отправляет запрос на API системы", "HTTPS")
+Rel_Left(APIGateway, Kafka, "Отправка событий с устройств пользователя в очередь", "JSON, async")
+Rel(IoTDevice, APIGateway, "Устройство публикует сообщения в брокер MQTT, который передаёт данные в API Gateway", "async MQTT")
+Rel(APIGateway, UserService, "Пишет/читает данные о пользователе и его домах", "JSON")
+Rel(APIGateway, DeviceService, "Получение информации о текущем состоянии устройства", "JSON")
+Rel_R(TelemetryService, NotifyService, "Уведомляет пользователя о случившихся событиях", "JSON")
+Rel(APIGateway, DeviceService, "Пишет/читает данные об устройствах пользователя. Обрабатывает команды пользователя", "JSON")
+Rel(UserService, PG1, "Сохраняет данные о пользователе и его домах", "SQL")
+Rel(DeviceService, PG2, "Сохраняет новое устройство пользователя и сценарии использования", "SQL")
+Rel(DeviceService, IoTDevice, "Отправляет команду на устройство", "async MQTT")
+Rel(TelemetryService, CH, "Запрашивает все события по устройству пользователя", "SQL")
+Rel(TelemetryService, CH, "Сохраняет события с датчиков устройств", "SQL")
+Rel(Kafka, TelemetryService, "Слушает события о состоянии устройств", "async, JSON")
+
+@enduml

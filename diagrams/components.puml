@@ -1,0 +1,29 @@
+@startuml
+title "Device Service" - Component Diagram
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+System_Ext(IoTDevice, "IoT Устройство", "Устройство, подключенное к сети, например, термостат, камера или датчик открытия ворот")
+
+Container_Boundary(SmartHomeSystem, "SmartHome System") {
+  Container(DeviceService, "Device Service", "Golang", "Обрабатывает пользовательские запросы")
+  Container(Database, "Database", "PostgreSQL", "Сохранение информации об утсройствах и сценариях использования")
+  ContainerDb(Kafka, "Kafka", "Очередь сообщений для событий с устройств")
+}
+
+Container(DeviceService, "Device Service", "Golang") {
+  Component(MQTTClient, "MQTT Client", "Golang", "Компонент для отправки команд через MQTT")
+  Component(ScenarioUsecase, "Scenario Usecase", "Golang", "Управление сценариями устройств")
+  Component(CommandHandler, "Command Handler", "Golang", "Обрабатывает поступающие команды")
+  Component(DeviceUsecase, "Device Usecase", "Golang", "Управление устройствами: добавление, удаление, обновление")
+  Component(DatabaseStorage, "Database Storage", "Golang", "Слой для работы с базой данных для сохранения информации о устройствах и сценариях")
+}
+
+Rel(MQTTClient, IoTDevice, "Отправляет команды на устройства через MQTT", "MQTT")
+Rel(DatabaseStorage, Database, "Использует DatabaseStorage для хранения данных об устройствах и сценариях")
+Rel(ScenarioUsecase, DatabaseStorage, "Использует DatabaseStorage для хранения данных об сценариях")
+Rel(DeviceUsecase, DatabaseStorage, "Использует DatabaseStorage для хранения данных об устройствах и сценариях")
+Rel(CommandHandler, MQTTClient, "Отправляет команду на устройство")
+Rel_Right(ScenarioUsecase, CommandHandler, "Отправляет команду на устройство")
+Rel_Up(Kafka, ScenarioUsecase, "Подписывается на нужные события для проигрывания сценария пользователя")
+@enduml
