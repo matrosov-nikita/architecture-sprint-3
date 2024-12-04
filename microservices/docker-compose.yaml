@@ -1,0 +1,54 @@
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - app-network
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - app-network
+    ports:
+      - "9092:9092"
+
+  postgres-1:
+    image: postgres:15
+    container_name:  postgres-1
+    environment:
+      POSTGRES_DB: master
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+    networks:
+      - app-network
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-1-data:/var/lib/postgresql/data
+
+#  smart-device-service:
+#    build: ./smart-device-service
+#    environment:
+#      KAFKA_BROKERS: kafka:9092
+#    depends_on:
+#      - kafka
+#    networks:
+#      - app-network
+volumes:
+  postgres-1-data:
+
+networks:
+  app-network:
