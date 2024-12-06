@@ -14,10 +14,10 @@ RUN go mod download
 COPY . .
 
 # Собираем бинарный файл
-RUN go build -o main .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o main cmd/main.go
 
-# Создаем минимальный образ для выполнения
-FROM debian:bullseye-slim
+# Этап выполнения
+FROM alpine:latest
 
 # Устанавливаем рабочую директорию
 WORKDIR /app
@@ -25,8 +25,10 @@ WORKDIR /app
 # Копируем бинарный файл из этапа сборки
 COPY --from=builder /app/main .
 
+COPY --from=builder /app/migrations ./migrations
+
 # Указываем порт, который будет использоваться контейнером
-EXPOSE 8080
+EXPOSE 8088
 
 # Команда запуска приложения
 CMD ["./main"]

@@ -1,9 +1,10 @@
-package publish_status_changed
+package wrappers
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/segmentio/kafka-go"
 
@@ -27,12 +28,11 @@ func NewStatusChangedPublisher(brokerAddress string) *StatusChangedPublisher {
 	}
 }
 
-func (p *StatusChangedPublisher) PublishStatusChanged(ctx context.Context, deviceID string, status dto.DeviceStatus) error {
-	fmt.Println("HERE")
+func (p *StatusChangedPublisher) PublishStatusChanged(ctx context.Context, deviceID int, status dto.DeviceStatus) error {
 	statusJSON, _ := json.Marshal(status)
 	if err := p.kafkaWriter.WriteMessages(ctx, []kafka.Message{
 		{
-			Key:   []byte(deviceID),
+			Key:   []byte(strconv.FormatInt(int64(deviceID), 10)),
 			Value: statusJSON,
 		},
 	}...); err != nil {

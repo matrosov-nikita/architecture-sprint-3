@@ -1,0 +1,33 @@
+asyncapi: '2.0.0'
+info:
+  title: Device Command Service
+  version: '1.0.0'
+  description: This service processes device commands received from the `device_commands` topic.
+
+servers:
+  production:
+    url: api.smart-device.com
+    protocol: kafka
+channels:
+  device_commands:
+    description: Channel for receiving device commands
+    subscribe:
+      operationId: receiveDeviceCommand
+      description: The service receives commands for devices
+      message:
+        contentType: application/json
+        payload:
+          type: object
+          properties:
+            user_id:
+              type: integer
+              description: The ID of the user who sent the command
+              example: 1
+            command:
+              type: string
+              description: The command to execute for the device
+              example: "turn_on"
+        x-message-key:
+          type: integer
+          description: The device ID (used as the message key)
+          example: 1

@@ -1,24 +1,35 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-migrate/migrate/v4"
 	migratepgx "github.com/golang-migrate/migrate/v4/database/pgx"
 	_ "github.com/golang-migrate/migrate/v4/source/file" // Для работы с локальными файлами миграций
 	_ "github.com/jackc/pgx/v5/stdlib"                   // Драйвер pgx для database/sql
-	httpUpdateStatus "smart-device-service/internal/http/update_status"
 
-	"smart-device-service/internal/usecases/publish_status_changed"
+	httpUpdateStatus "smart-device-service/internal/http/update_status"
+	"smart-device-service/internal/subscribers"
+	"smart-device-service/internal/usecases/send_command"
 	"smart-device-service/internal/usecases/update_status"
+	updateStatusStorage "smart-device-service/internal/usecases/update_status/storage"
+	"smart-device-service/internal/usecases/update_status/wrappers"
 )
 
 func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	dbURL := os.Getenv("POSTGRESQL_URL")
 	kafkaBrokerURL := os.Getenv("KAFKA_BROKER_URL")
 
@@ -28,21 +39,61 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer db.Close()
-	fmt.Println("ping", db.Ping())
 	runMigrations(db)
+
+	// run subscribers
+	commandsHandler := send_command.NewSendCommandUsecase()
+	commandSub := subscribers.NewCommandSubscriber(kafkaBrokerURL, commandsHandler)
+	defer commandSub.Stop()
+
+	go func() {
+		if err := commandSub.Run(ctx); err != nil {
+			fmt.Printf("command subscriber error: %v", err)
+		}
+	}()
 
 	router := gin.Default()
 
-	statusChangePublisher := publish_status_changed.NewStatusChangedPublisher(kafkaBrokerURL)
-
-	updateStatusUsecase := update_status.NewUpdateStatusUsecase(statusChangePublisher)
+	statusChangePublisher := wrappers.NewStatusChangedPublisher(kafkaBrokerURL)
+	storage := updateStatusStorage.New(db)
+	updateStatusUsecase := update_status.NewUpdateStatusUsecase(statusChangePublisher, storage)
 	updateStatusHandler := httpUpdateStatus.NewHandler(updateStatusUsecase)
 
 	router.PUT("/devices/:deviceId/status", updateStatusHandler.Handle)
+	router.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "Welcome to Smart Device Service!",
+		})
+	})
+	srv := &http.Server{
+		Addr:    ":8088",
+		Handler: router,
+	}
 
-	log.Println("Starting server on :8088")
-	if err := router.Run(":8088"); err != nil {
-		log.Fatalf("Error starting server: %v", err)
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			fmt.Printf("Error starting server: %v\n", err)
+		}
+	}()
+
+	sigchan := make(chan os.Signal, 1)
+	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Ожидание сигнала от системы (например, при завершении работы)
+	<-sigchan
+	fmt.Println("Shutdown signal received, initiating graceful shutdown...")
+
+	// Отмена контекста при получении сигнала
+	cancel()
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 2*time.Second)
+	defer shutdownCancel()
+
+	// Ожидаем завершения работы сервера с таймаутом
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		fmt.Printf("Server forced to shutdown: %v\n", err)
+	} else {
+		fmt.Println("Server gracefully shut down")
 	}
 }
 

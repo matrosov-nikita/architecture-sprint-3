@@ -1,0 +1,60 @@
+openapi: 3.0.1
+info:
+  title: Device API
+  version: 1.0.0
+  description: API to manage the status of devices.
+paths:
+  /devices/{deviceId}/status:
+    put:
+      summary: Update the status of a device
+      operationId: updateDeviceStatus
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the device whose status is being updated
+      requestBody:
+        description: The status data to update for the device
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: The new status of the device
+                  example: "on"
+      responses:
+        '200':
+          description: Successfully updated device status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Status updated"
+        '400':
+          description: Invalid device ID or JSON payload
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid device ID"
+        '500':
+          description: Internal server error while updating device status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Status update internal error"

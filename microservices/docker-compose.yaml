@@ -15,15 +15,39 @@ services:
     depends_on:
       - zookeeper
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: '1'
+      KAFKA_MIN_INSYNC_REPLICAS: '1'
     networks:
-      - app-network
+    - app-network
     ports:
       - "9092:9092"
+    expose:
+      - '29092'
+
+  init-kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - kafka
+    networks:
+      - app-network
+    entrypoint: [ '/bin/sh', '-c' ]
+    command: |
+      "
+      # blocks until kafka is reachable
+      echo -e 'Topics list'
+      kafka-topics --bootstrap-server kafka:29092 --list
+
+      echo -e 'Creating kafka topics'
+      kafka-topics --create --topic device_statuses --bootstrap-server kafka:29092 --partitions 1 --replication-factor 1
+      kafka-topics --create --topic device_commands --bootstrap-server kafka:29092 --partitions 1 --replication-factor 1
+
+      echo -e 'Successfully created the following topics:'
+      kafka-topics --bootstrap-server kafka:29092 --list
+      "
 
   postgres-1:
     image: postgres:15
@@ -39,14 +63,18 @@ services:
     volumes:
       - postgres-1-data:/var/lib/postgresql/data
 
-#  smart-device-service:
-#    build: ./smart-device-service
-#    environment:
-#      KAFKA_BROKERS: kafka:9092
-#    depends_on:
-#      - kafka
-#    networks:
-#      - app-network
+  smart-device-service:
+    build: ./smart-device-service
+    environment:
+      KAFKA_BROKERS: kafka:9092
+      POSTGRESQL_URL: postgres://user:pass@postgres-1:5433/master?sslmode=disable
+    depends_on:
+      - kafka
+    ports:
+      - "8088:8088"
+    networks:
+      - app-network
+
 volumes:
   postgres-1-data:
 

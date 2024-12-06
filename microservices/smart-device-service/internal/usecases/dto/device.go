@@ -1,10 +1,10 @@
 package dto
 
 type DeviceStatus struct {
-	Status string `json:"status"` // "on" or "off"
+	Status string `json:"status"`
 }
 
 type DeviceCommand struct {
-	DeviceID int    `json:"deviceId"`
-	Command  string `json:"command"` // "turn_on" or "turn_off"
+	Command string `json:"command"`
+	UserID  int    `json:"user_id"`
 }

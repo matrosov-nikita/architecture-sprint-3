@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strconv"
 
 	"smart-device-service/internal/usecases/dto"
 )
 
 type statusUpdater interface {
-	UpdateDeviceStatus(ctx context.Context, deviceID string, update dto.DeviceStatus) error
+	UpdateDeviceStatus(ctx context.Context, deviceID int, update dto.DeviceStatus) error
 }
 
 type Handler struct {
@@ -22,7 +23,13 @@ func NewHandler(statusUpdater statusUpdater) *Handler {
 }
 
 func (h *Handler) Handle(c *gin.Context) {
-	deviceID := c.Param("deviceId")
+	paramDeviceID := c.Param("deviceId")
+
+	deviceID, err := strconv.Atoi(paramDeviceID)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid device ID"})
+		return
+	}
 
 	var statusUpdate dto.DeviceStatus
 	if err := c.ShouldBindJSON(&statusUpdate); err != nil {
@@ -30,15 +37,11 @@ func (h *Handler) Handle(c *gin.Context) {
 		return
 	}
 
-	if statusUpdate.Status != "on" && statusUpdate.Status != "off" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid status"})
-		return
-	}
-
 	// Обновляем статус устройства
 	if err := h.statusUpdater.UpdateDeviceStatus(c.Request.Context(), deviceID, statusUpdate); err != nil {
-		fmt.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "status update internal error"})
+		// Для упрощения логируем прямо в консоль.
+		fmt.Printf("update device status: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Status update internal error"})
 		return
 	}
 
