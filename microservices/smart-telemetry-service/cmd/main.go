@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"smart-device-service/internal/usecases/get_device"
 	"syscall"
 	"time"
 
@@ -17,16 +16,14 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	migratepgx "github.com/golang-migrate/migrate/v4/database/pgx"
 	_ "github.com/golang-migrate/migrate/v4/source/file" // Для работы с локальными файлами миграций
-	_ "github.com/jackc/pgx/v5/stdlib"                   // Драйвер pgx для database/sql
+	_ "github.com/jackc/pgx/v5/stdlib"
 
-	httpGetDevice "smart-device-service/internal/http/get_device"
-	httpUpdateStatus "smart-device-service/internal/http/update_status"
-	"smart-device-service/internal/subscribers"
-	getDeviceStorage "smart-device-service/internal/usecases/get_device/storage"
-	"smart-device-service/internal/usecases/send_command"
-	"smart-device-service/internal/usecases/update_status"
-	updateStatusStorage "smart-device-service/internal/usecases/update_status/storage"
-	"smart-device-service/internal/usecases/update_status/wrappers"
+	getDeviceTelemetryHandler "smart-telemetry-service/internal/http/get_device_telemetry"
+	"smart-telemetry-service/internal/subscribers"
+	"smart-telemetry-service/internal/usecases/get_device_telemetry"
+	getEventsStorage "smart-telemetry-service/internal/usecases/get_device_telemetry/storage"
+	"smart-telemetry-service/internal/usecases/handle_sensor_event"
+	handleSensorEventStorage "smart-telemetry-service/internal/usecases/handle_sensor_event/storage"
 )
 
 func main() {
@@ -45,37 +42,31 @@ func main() {
 	runMigrations(db)
 
 	// run subscribers
-	commandsHandler := send_command.NewSendCommandUsecase()
-	commandSub := subscribers.NewCommandSubscriber(kafkaBrokerURL, commandsHandler)
-	defer commandSub.Stop()
+	telemetryStotage := handleSensorEventStorage.NewStorage(db)
+	sensorDataHandler := handle_sensor_event.NewHandleSensorEventUsecase(telemetryStotage)
+	sensorSub := subscribers.NewSensorDataSubscriber(kafkaBrokerURL, sensorDataHandler)
+	defer sensorSub.Stop()
 
 	go func() {
-		if err := commandSub.Run(ctx); err != nil {
-			fmt.Printf("command subscriber error: %v", err)
+		if err := sensorSub.Run(ctx); err != nil {
+			fmt.Printf("sensor subscriber error: %v", err)
 		}
 	}()
 
+	// Usecases.
+	getTelemetryStorage := getEventsStorage.New(db)
+	getDeviceTelemetryUsecase := get_device_telemetry.NewGetEventsUsecase(getTelemetryStorage)
+	getDeviceTelemetryApi := getDeviceTelemetryHandler.NewHandler(getDeviceTelemetryUsecase)
+
 	router := gin.Default()
-
-	statusChangePublisher := wrappers.NewStatusChangedPublisher(kafkaBrokerURL)
-	storage := updateStatusStorage.New(db)
-	updateStatusUsecase := update_status.NewUpdateStatusUsecase(statusChangePublisher, storage)
-	updateStatusHandler := httpUpdateStatus.NewHandler(updateStatusUsecase)
-
-	getDeviceStorage := getDeviceStorage.New(db)
-	getDeviceUsecase := get_device.NewGetDeviceUsecase(getDeviceStorage)
-	getDeviceHandler := httpGetDevice.NewHandler(getDeviceUsecase)
-
-	router.PUT("/devices/:deviceId/status", updateStatusHandler.Handle)
-	router.GET("/devices/:deviceId", getDeviceHandler.Handle)
-
+	router.GET("/telemetry/devices/:deviceId", getDeviceTelemetryApi.Handle)
 	router.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{
-			"message": "Welcome to Smart Device Service!",
+			"message": "Welcome to Smart Telemetry Service!",
 		})
 	})
 	srv := &http.Server{
-		Addr:    ":8088",
+		Addr:    ":8089",
 		Handler: router,
 	}
 

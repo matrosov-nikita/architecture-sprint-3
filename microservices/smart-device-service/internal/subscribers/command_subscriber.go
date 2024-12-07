@@ -45,19 +45,13 @@ func (s *CommandSubscriber) Run(ctx context.Context) error {
 			break
 		}
 
-		var deviceID int
-		if err := json.Unmarshal(m.Key, &deviceID); err != nil {
-			fmt.Printf("command subscriber decode msg key: %v\n", err)
-			continue
-		}
-
 		var cmd usecaseDto.DeviceCommand
 		if err := json.Unmarshal(m.Value, &cmd); err != nil {
 			fmt.Printf("command subscriber decode msg value: %v\n", err)
 			continue
 		}
 
-		if err := s.commandHandler.SendCommand(deviceID, usecaseDto.DeviceCommand{
+		if err := s.commandHandler.SendCommand(cmd.DeviceID, usecaseDto.DeviceCommand{
 			Command: cmd.Command,
 			UserID:  cmd.UserID,
 		}); err != nil {

@@ -63,20 +63,35 @@ services:
     volumes:
       - postgres-1-data:/var/lib/postgresql/data
 
-  smart-device-service:
-    build: ./smart-device-service
+  postgres-2:
+    image: postgres:15
+    container_name:  postgres-2
     environment:
-      KAFKA_BROKERS: kafka:9092
-      POSTGRESQL_URL: postgres://user:pass@postgres-1:5433/master?sslmode=disable
-    depends_on:
-      - kafka
-    ports:
-      - "8088:8088"
+      POSTGRES_DB: master
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
     networks:
       - app-network
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres-2-data:/var/lib/postgresql/data
+
+#  smart-device-service:
+#    build: ./smart-device-service
+#    environment:
+#      KAFKA_BROKERS: kafka:9092
+#      POSTGRESQL_URL: postgres://user:pass@postgres-1:5433/master?sslmode=disable
+#    depends_on:
+#      - kafka
+#    ports:
+#      - "8088:8088"
+#    networks:
+#      - app-network
 
 volumes:
   postgres-1-data:
+  postgres-2-data:
 
 networks:
   app-network:

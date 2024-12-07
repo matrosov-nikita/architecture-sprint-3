@@ -38,6 +38,7 @@ resource "kubernetes_job" "create_kafka_topics" {
                         <<EOT
 kafka-topics.sh --create --topic device_statuses --bootstrap-server kafka.default.svc.cluster.local:9092 --partitions 1 --replication-factor 1 || true
 kafka-topics.sh --create --topic device_commands --bootstrap-server kafka.default.svc.cluster.local:9092 --partitions 1 --replication-factor 1 || true
+kafka-topics.sh --create --topic sensor_data --bootstrap-server kafka.default.svc.cluster.local:9092 --partitions 1 --replication-factor 1 || true
 EOT
                     ]
                 }
