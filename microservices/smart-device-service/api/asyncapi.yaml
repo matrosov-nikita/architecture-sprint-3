@@ -3,11 +3,11 @@ info:
   title: Device Command Service
   version: '1.0.0'
   description: This service processes device commands received from the `device_commands` topic.
-
 servers:
-  production:
-    url: api.smart-device.com
+  local:
+    url: kafka://localhost:9092
     protocol: kafka
+    description: Подключение к локальному серверу Kafka.
 channels:
   device_commands:
     description: Channel for receiving device commands
@@ -19,6 +19,10 @@ channels:
         payload:
           type: object
           properties:
+            device_id:
+              type: integer
+              description: The device ID (used as the message key)
+              example: 1
             user_id:
               type: integer
               description: The ID of the user who sent the command
@@ -27,7 +31,3 @@ channels:
               type: string
               description: The command to execute for the device
               example: "turn_on"
-        x-message-key:
-          type: integer
-          description: The device ID (used as the message key)
-          example: 1

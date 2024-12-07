@@ -18,4 +18,5 @@ type Device struct {
 	SerialNumber string    `json:"serial_number"`
 	UserID       string    `json:"user_id"`
 	CreatedAt    time.Time `json:"created_at"`
+	Status       string    `json:"status"`
 }

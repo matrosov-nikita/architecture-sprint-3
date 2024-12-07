@@ -1,0 +1,73 @@
+openapi: 3.0.1
+info:
+  title: Smart Telemetry Service
+  version: 1.0.0
+  description: API для получения данных о температурных событиях устройств.
+
+paths:
+  /telemetry/devices/{deviceId}:
+    get:
+      summary: Get telemetry events for a specific device
+      description: Возвращает список  событий телеметрии для устройства по его ID.
+      operationId: getDeviceTelemetry
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Уникальный идентификатор устройства
+      responses:
+        '200':
+          description: Список событий успешно возвращен
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    deviceId:
+                      type: integer
+                      example: 123
+                    temperature:
+                      type: number
+                      format: float
+                      example: 23.5
+                    type:
+                      type: string
+                      example: "temperature_event"
+                    occured_on:
+                      type: string
+                      format: date-time
+                      example: "2023-12-07T10:20:30Z"
+        '400':
+          description: Неверный идентификатор устройства
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid device ID"
+        '404':
+          description: Устройство не найдено
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Device not found"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal server error occurred"

@@ -2,7 +2,7 @@ openapi: 3.0.1
 info:
   title: Device API
   version: 1.0.0
-  description: API to manage the status of devices.
+  description: API to manage devices.
 paths:
   /devices/{deviceId}/status:
     put:
@@ -58,3 +58,68 @@ paths:
                   error:
                     type: string
                     example: "Status update internal error"
+  /devices/{deviceId}:
+    get:
+      summary: Get information about a device
+      operationId: getDeviceInfo
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the device to fetch information for
+      responses:
+        '200':
+          description: Successfully fetched device information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  name:
+                    type: string
+                    example: "Device A"
+                  serial_number:
+                    type: string
+                    example: "SN12345"
+                  user_id:
+                    type: string
+                    example: "user1"
+                  created_at:
+                    type: string
+                    format: date-time
+                    example: "2022-12-01T12:00:00Z"
+        '404':
+          description: Device not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Device not found"
+        '400':
+          description: Invalid device ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid device ID"
+        '500':
+          description: Internal server error while fetching device information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal server error occurred"

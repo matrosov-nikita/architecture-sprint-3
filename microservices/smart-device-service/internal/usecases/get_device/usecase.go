@@ -37,6 +37,7 @@ func (u *GetDeviceUsecase) GetDevice(ctx context.Context, deviceID int) (dto.Dev
 		UserID:       storageDevice.UserID,
 		Name:         storageDevice.Name,
 		CreatedAt:    storageDevice.CreatedAt,
+		Status:       storageDevice.Status,
 	}
 
 	return d, nil
