@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"smart-device-service/internal/usecases/get_device"
 	"syscall"
 	"time"
 
@@ -22,6 +21,7 @@ import (
 	httpGetDevice "smart-device-service/internal/http/get_device"
 	httpUpdateStatus "smart-device-service/internal/http/update_status"
 	"smart-device-service/internal/subscribers"
+	"smart-device-service/internal/usecases/get_device"
 	getDeviceStorage "smart-device-service/internal/usecases/get_device/storage"
 	"smart-device-service/internal/usecases/send_command"
 	"smart-device-service/internal/usecases/update_status"

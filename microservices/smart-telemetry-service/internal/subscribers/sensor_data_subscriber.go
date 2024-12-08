@@ -12,6 +12,7 @@ import (
 
 const (
 	sensorDataTopic = "sensor_data"
+	groupID         = "my-group-2"
 )
 
 type dataHandler interface {
@@ -29,7 +30,7 @@ func NewSensorDataSubscriber(kafkaBrokerAddress string, dataHandler dataHandler)
 		Topic:       sensorDataTopic,
 		Partition:   0,
 		MaxBytes:    10e6, // 10MB
-		GroupID:     "my-group-2",
+		GroupID:     groupID,
 		StartOffset: kafka.LastOffset,
 	})
 
@@ -56,7 +57,7 @@ func (s *SensorDataSubscriber) Run(ctx context.Context) error {
 		e.OccuredOn = m.Time
 
 		if err := s.dataHandler.HandleSensorEvents(context.Background(), []dto.SensorTemperatureEvent{e}); err != nil {
-			return fmt.Errorf("handle sensor event: %v\n", err)
+			return fmt.Errorf("handle sensor events: %v\n", err)
 		}
 	}
 

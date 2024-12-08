@@ -3,6 +3,7 @@ package get_device
 import (
 	"context"
 	"errors"
+
 	"smart-device-service/internal/usecases/dto"
 	storageErrors "smart-device-service/internal/usecases/get_device/storage"
 	storageDto "smart-device-service/internal/usecases/get_device/storage/dto"

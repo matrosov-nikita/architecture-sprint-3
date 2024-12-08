@@ -3,7 +3,8 @@ info:
   title: Smart Telemetry Service
   version: 1.0.0
   description: API для получения данных о температурных событиях устройств.
-
+servers:
+  - url: http://localhost:8080
 paths:
   /telemetry/devices/{deviceId}:
     get:

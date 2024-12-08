@@ -3,6 +3,8 @@ info:
   title: Device API
   version: 1.0.0
   description: API to manage devices.
+servers:
+  - url: http://localhost:8080
 paths:
   /devices/{deviceId}/status:
     put:

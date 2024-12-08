@@ -4,12 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/segmentio/kafka-go"
+
 	usecaseDto "smart-device-service/internal/usecases/dto"
 )
 
 const (
 	deviceCommandsTopic = "device_commands"
+	groupID             = "my-group"
 )
 
 type commandHandler interface {
@@ -27,7 +30,7 @@ func NewCommandSubscriber(kafkaBrokerAddress string, handler commandHandler) *Co
 		Topic:       deviceCommandsTopic,
 		Partition:   0,
 		MaxBytes:    10e6, // 10MB
-		GroupID:     "my-group",
+		GroupID:     groupID,
 		StartOffset: kafka.LastOffset,
 	})
 

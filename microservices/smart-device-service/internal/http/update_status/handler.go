@@ -3,9 +3,10 @@ package update_status
 import (
 	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
 
 	"smart-device-service/internal/usecases/dto"
 )

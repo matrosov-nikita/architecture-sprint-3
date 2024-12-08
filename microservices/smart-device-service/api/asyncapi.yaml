@@ -21,7 +21,7 @@ channels:
           properties:
             device_id:
               type: integer
-              description: The device ID (used as the message key)
+              description: The device ID
               example: 1
             user_id:
               type: integer

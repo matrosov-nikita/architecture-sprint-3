@@ -20,7 +20,7 @@ channels:
         payload:
           type: object
           properties:
-            deviceId:
+            device_id:
               type: integer
               description: Уникальный идентификатор устройства
               example: 123
