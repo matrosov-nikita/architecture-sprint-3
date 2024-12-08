@@ -1,0 +1,31 @@
+openapi: 3.0.0
+info:
+  title: smart-system-api
+  version: 0.1.0
+paths:
+  /devices/{deviceId}:
+    get:
+      x-kusk:
+        upstream:
+          service:
+            name: chart1-smart-device-service
+            namespace: default
+            port: 8088
+  /devices/{deviceId}/status:
+    put:
+      x-kusk:
+        upstream:
+          service:
+            name: chart1-smart-device-service
+            namespace: default
+            port: 8088
+
+  /telemetry/devices/{deviceId}:
+    get:
+      operationId: getServiceB
+      x-kusk:
+        upstream:
+          service:
+            name: chart2-smart-telemetry-service
+            namespace: default
+            port: 8089
