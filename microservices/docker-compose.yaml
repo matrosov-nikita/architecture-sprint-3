@@ -1,0 +1,116 @@
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - app-network
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: '1'
+      KAFKA_MIN_INSYNC_REPLICAS: '1'
+    networks:
+    - app-network
+    ports:
+      - "9092:9092"
+    expose:
+      - '29092'
+
+  init-kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - kafka
+    networks:
+      - app-network
+    entrypoint: [ '/bin/sh', '-c' ]
+    command: |
+      "
+      # blocks until kafka is reachable
+      echo -e 'Topics list'
+      kafka-topics --bootstrap-server kafka:29092 --list
+
+      echo -e 'Creating kafka topics'
+      kafka-topics --create --topic device_statuses --bootstrap-server kafka:29092 --partitions 1 --replication-factor 1 || true
+      kafka-topics --create --topic device_commands --bootstrap-server kafka:29092 --partitions 1 --replication-factor 1 || true
+
+      echo -e 'Successfully created the following topics:'
+      kafka-topics --bootstrap-server kafka:29092 --list
+      "
+
+  postgres2:
+    image: postgres:15
+    container_name:  postgres2
+    environment:
+      POSTGRES_DB: master
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+    networks:
+      - app-network
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres2-data:/var/lib/postgresql/data
+
+
+  postgres1:
+    image: postgres:15
+    container_name:  postgres1
+    environment:
+      POSTGRES_DB: master
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+    networks:
+      - app-network
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres1-data:/var/lib/postgresql/data
+
+  smart-device-service:
+    build: ./smart-device-service
+    environment:
+      KAFKA_BROKERS: kafka:9092
+      POSTGRESQL_URL: postgres://user:pass@postgres1:5432/master?sslmode=disable
+    depends_on:
+      - init-kafka
+      - postgres1
+      - kafka
+    ports:
+      - "8088:8088"
+    networks:
+      - app-network
+    restart: always
+
+  smart-telemetry-service:
+    build: ./smart-telemetry-service
+    environment:
+      KAFKA_BROKERS: kafka:9092
+      POSTGRESQL_URL: postgres://user:pass@postgres2:5432/master?sslmode=disable
+    depends_on:
+      - init-kafka
+      - postgres2
+      - kafka
+    ports:
+      - "8089:8089"
+    networks:
+      - app-network
+    restart: always
+
+volumes:
+  postgres1-data:
+  postgres2-data:
+
+networks:
+  app-network:
