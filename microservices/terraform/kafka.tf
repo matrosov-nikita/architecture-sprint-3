@@ -8,43 +8,25 @@ resource "helm_release" "kafka" {
     values = [file("kafka_values.yaml")]
 }
 
-resource "kubernetes_job" "create_kafka_topics" {
-    metadata {
-        name      = "create-kafka-topics"
-        namespace = "default"
-    }
+resource "null_resource" "create_kafka_topic" {
+    depends_on = [helm_release.kafka]
 
-    spec {
-        template {
-            metadata {
-                labels = {
-                    app = "kafka"
-                }
-            }
+    provisioner "local-exec" {
+        command = <<EOT
+        echo "Ожидание, пока Kafka станет доступным..."
+       until helm status kafka | grep 'deployed'; do
+            sleep 1
+        done
 
-            spec {
-                init_container {
-                    name  = "wait-for-kafka"
-                    image = "busybox"
-                    command = ["sh", "-c", "until nc -z kafka.default.svc.cluster.local 9092; do echo 'Waiting for Kafka to be ready...'; sleep 2; done"]
-                }
+      echo "Kafka стал доступен. Начинаем создание топиков..."
+      kubectl exec -n default -it $(kubectl get pods -l app.kubernetes.io/name=kafka -o jsonpath='{.items[0].metadata.name}') -- \
+        kafka-topics.sh --create --topic device_statuses --bootstrap-server kafka.default.svc.cluster.local:9092 --partitions 1 --replication-factor 1 --if-not-exists
 
-                container {
-                    image = "bitnami/kafka:latest"
-                    name  = "create-topics"
-                    command = [
-                        "sh",
-                        "-c",
-                        <<EOT
-kafka-topics.sh --create --topic device_statuses --bootstrap-server kafka.default.svc.cluster.local:9092 --partitions 1 --replication-factor 1 || true
-kafka-topics.sh --create --topic device_commands --bootstrap-server kafka.default.svc.cluster.local:9092 --partitions 1 --replication-factor 1 || true
-kafka-topics.sh --create --topic sensor_data --bootstrap-server kafka.default.svc.cluster.local:9092 --partitions 1 --replication-factor 1 || true
-EOT
-                    ]
-                }
+      kubectl exec -n default -it $(kubectl get pods -l app.kubernetes.io/name=kafka -o jsonpath='{.items[0].metadata.name}') -- \
+        kafka-topics.sh --create --topic device_commands --bootstrap-server kafka.default.svc.cluster.local:9092 --partitions 1 --replication-factor 1  --if-not-exists
 
-                restart_policy = "OnFailure"
-            }
-        }
+      kubectl exec -n default -it $(kubectl get pods -l app.kubernetes.io/name=kafka -o jsonpath='{.items[0].metadata.name}') -- \
+        kafka-topics.sh --create --topic sensor_data --bootstrap-server kafka.default.svc.cluster.local:9092 --partitions 1 --replication-factor 1  --if-not-exists
+    EOT
     }
 }

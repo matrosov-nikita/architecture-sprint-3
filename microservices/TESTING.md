@@ -57,7 +57,7 @@ curl -X GET localhost:8080/telemetry/devices/1
 ```
 Вставить событие в stdin:
 ```bash
- {"device_id": 1, "temperature": 26.4, "type": "temperature"}
+{"device_id": 1, "temperature": 26.4, "type": "temperature"}
 ```
 
 #### Получить телеметрию по устройству:
