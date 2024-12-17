@@ -1,0 +1,40 @@
+asyncapi: '2.0.0'
+info:
+  title: Smart Telemetry Service
+  version: '1.0.0'
+  description: Сервис для обработки данных температурных событий из топика Kafka.
+servers:
+  local:
+    url: kafka://localhost:9092
+    protocol: kafka
+    description: Подключение к локальному серверу Kafka.
+
+channels:
+  sensor_data:
+    description: Channel для подписки на данные событий телеметрии.
+    subscribe:
+      summary: Слушать события от устройств
+      operationId: receiveSensorData
+      message:
+        contentType: application/json
+        payload:
+          type: object
+          properties:
+            device_id:
+              type: integer
+              description: Уникальный идентификатор устройства
+              example: 123
+            temperature:
+              type: number
+              format: float
+              description: Температурные данные устройства
+              example: 23.5
+            type:
+              type: string
+              description: Тип события
+              example: "temperature_event"
+            occured_on:
+              type: string
+              format: date-time
+              description: Дата и время, когда произошло событие
+              example: "2023-12-07T10:20:30Z"
