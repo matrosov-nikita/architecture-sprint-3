@@ -26,6 +26,12 @@ import (
 	handleSensorEventStorage "smart-telemetry-service/internal/usecases/handle_sensor_event/storage"
 )
 
+const (
+	readHeaderTimeout           = 5 * time.Second
+	shutdownTimeout             = 2 * time.Second
+	signalChannelBufferCapacity = 1
+)
+
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -36,16 +42,18 @@ func main() {
 	var err error
 	db, err := sql.Open("pgx", dbURL) // Используем драйвер pgx
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Printf("Failed to connect to database: %v", err)
+		cancel()
+		return
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	runMigrations(db)
 
 	// run subscribers
 	telemetryStotage := handleSensorEventStorage.NewStorage(db)
 	sensorDataHandler := handle_sensor_event.NewHandleSensorEventUsecase(telemetryStotage)
 	sensorSub := subscribers.NewSensorDataSubscriber(kafkaBrokerURL, sensorDataHandler)
-	defer sensorSub.Stop()
+	defer func() { _ = sensorSub.Stop() }()
 
 	go func() {
 		if err := sensorSub.Run(ctx); err != nil {
@@ -61,13 +69,14 @@ func main() {
 	router := gin.Default()
 	router.GET("/telemetry/devices/:deviceId", getDeviceTelemetryApi.Handle)
 	router.GET("/", func(c *gin.Context) {
-		c.JSON(200, gin.H{
+		c.JSON(http.StatusOK, gin.H{
 			"message": "Welcome to Smart Telemetry Service!",
 		})
 	})
 	srv := &http.Server{
-		Addr:    ":8089",
-		Handler: router,
+		Addr:              ":8089",
+		Handler:           router,
+		ReadHeaderTimeout: readHeaderTimeout,
 	}
 
 	go func() {
@@ -76,7 +85,7 @@ func main() {
 		}
 	}()
 
-	sigchan := make(chan os.Signal, 1)
+	sigchan := make(chan os.Signal, signalChannelBufferCapacity)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
 
 	// Ожидание сигнала от системы (например, при завершении работы)
@@ -86,7 +95,7 @@ func main() {
 	// Отмена контекста при получении сигнала
 	cancel()
 
-	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 2*time.Second)
+	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, shutdownTimeout)
 	defer shutdownCancel()
 
 	// Ожидаем завершения работы сервера с таймаутом

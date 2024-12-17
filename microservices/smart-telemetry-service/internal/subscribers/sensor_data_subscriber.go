@@ -13,6 +13,7 @@ import (
 const (
 	sensorDataTopic = "sensor_data"
 	groupID         = "my-group-2"
+	readerMaxBytes  = 10 * 1024 * 1024
 )
 
 type dataHandler interface {
@@ -29,7 +30,7 @@ func NewSensorDataSubscriber(kafkaBrokerAddress string, dataHandler dataHandler)
 		Brokers:     []string{kafkaBrokerAddress},
 		Topic:       sensorDataTopic,
 		Partition:   0,
-		MaxBytes:    10e6, // 10MB
+		MaxBytes:    readerMaxBytes, // 10MB
 		GroupID:     groupID,
 		StartOffset: kafka.LastOffset,
 	})
@@ -38,7 +39,7 @@ func NewSensorDataSubscriber(kafkaBrokerAddress string, dataHandler dataHandler)
 }
 
 func (s *SensorDataSubscriber) Stop() error {
-	return s.kafkaReader.Close()
+	return fmt.Errorf("stop sensor data subscriber: %w", s.kafkaReader.Close())
 }
 
 func (s *SensorDataSubscriber) Run(ctx context.Context) error {
@@ -56,8 +57,10 @@ func (s *SensorDataSubscriber) Run(ctx context.Context) error {
 
 		e.OccuredOn = m.Time
 
+		fmt.Printf("got telemetry event: %v\n", e)
+
 		if err := s.dataHandler.HandleSensorEvents(context.Background(), []dto.SensorTemperatureEvent{e}); err != nil {
-			return fmt.Errorf("handle sensor events: %v\n", err)
+			return fmt.Errorf("handle sensor events: %w", err)
 		}
 	}
 

@@ -13,6 +13,7 @@ import (
 const (
 	deviceCommandsTopic = "device_commands"
 	groupID             = "my-group"
+	readerMaxBytes      = 10 * 1024 * 1024
 )
 
 type commandHandler interface {
@@ -29,7 +30,7 @@ func NewCommandSubscriber(kafkaBrokerAddress string, handler commandHandler) *Co
 		Brokers:     []string{kafkaBrokerAddress},
 		Topic:       deviceCommandsTopic,
 		Partition:   0,
-		MaxBytes:    10e6, // 10MB
+		MaxBytes:    readerMaxBytes,
 		GroupID:     groupID,
 		StartOffset: kafka.LastOffset,
 	})
@@ -38,7 +39,7 @@ func NewCommandSubscriber(kafkaBrokerAddress string, handler commandHandler) *Co
 }
 
 func (s *CommandSubscriber) Stop() error {
-	return s.kafkaReader.Close()
+	return fmt.Errorf("stop command subscriber: %w", s.kafkaReader.Close())
 }
 
 func (s *CommandSubscriber) Run(ctx context.Context) error {
@@ -58,7 +59,7 @@ func (s *CommandSubscriber) Run(ctx context.Context) error {
 			Command: cmd.Command,
 			UserID:  cmd.UserID,
 		}); err != nil {
-			return fmt.Errorf("send command: %v\n", err)
+			return fmt.Errorf("send command: %w", err)
 		}
 	}
 

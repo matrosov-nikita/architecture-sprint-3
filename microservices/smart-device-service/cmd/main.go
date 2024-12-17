@@ -25,8 +25,16 @@ import (
 	getDeviceStorage "smart-device-service/internal/usecases/get_device/storage"
 	"smart-device-service/internal/usecases/send_command"
 	"smart-device-service/internal/usecases/update_status"
+	"smart-device-service/internal/usecases/update_status/events_sender"
 	updateStatusStorage "smart-device-service/internal/usecases/update_status/storage"
 	"smart-device-service/internal/usecases/update_status/wrappers"
+)
+
+const (
+	readHeaderTimeout           = 5 * time.Second
+	shutdownTimeout             = 2 * time.Second
+	signalChannelBufferCapacity = 1
+	outboxTimeout               = 2 * time.Second
 )
 
 func main() {
@@ -39,7 +47,9 @@ func main() {
 	var err error
 	db, err := sql.Open("pgx", dbURL) // Используем драйвер pgx
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Printf("Failed to connect to database: %v", err)
+		cancel()
+		return
 	}
 	defer db.Close()
 	runMigrations(db)
@@ -47,7 +57,7 @@ func main() {
 	// run subscribers
 	commandsHandler := send_command.NewSendCommandUsecase()
 	commandSub := subscribers.NewCommandSubscriber(kafkaBrokerURL, commandsHandler)
-	defer commandSub.Stop()
+	defer func() { _ = commandSub.Stop() }()
 
 	go func() {
 		if err := commandSub.Run(ctx); err != nil {
@@ -58,8 +68,13 @@ func main() {
 	router := gin.Default()
 
 	statusChangePublisher := wrappers.NewStatusChangedPublisher(kafkaBrokerURL)
-	storage := updateStatusStorage.New(db)
-	updateStatusUsecase := update_status.NewUpdateStatusUsecase(statusChangePublisher, storage)
+	updateStatusStorage := updateStatusStorage.New(db)
+
+	// Запуск transactional outbox
+	outboxSender := events_sender.NewSender(updateStatusStorage, statusChangePublisher)
+	outboxSender.StartProcessEvents(ctx, outboxTimeout)
+
+	updateStatusUsecase := update_status.NewUpdateStatusUsecase(updateStatusStorage)
 	updateStatusHandler := httpUpdateStatus.NewHandler(updateStatusUsecase)
 
 	getDeviceStorage := getDeviceStorage.New(db)
@@ -70,13 +85,14 @@ func main() {
 	router.GET("/devices/:deviceId", getDeviceHandler.Handle)
 
 	router.GET("/", func(c *gin.Context) {
-		c.JSON(200, gin.H{
+		c.JSON(http.StatusOK, gin.H{
 			"message": "Welcome to Smart Device Service!",
 		})
 	})
 	srv := &http.Server{
-		Addr:    ":8088",
-		Handler: router,
+		Addr:              ":8088",
+		Handler:           router,
+		ReadHeaderTimeout: readHeaderTimeout,
 	}
 
 	go func() {
@@ -85,7 +101,7 @@ func main() {
 		}
 	}()
 
-	sigchan := make(chan os.Signal, 1)
+	sigchan := make(chan os.Signal, signalChannelBufferCapacity)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
 
 	// Ожидание сигнала от системы (например, при завершении работы)
@@ -95,7 +111,7 @@ func main() {
 	// Отмена контекста при получении сигнала
 	cancel()
 
-	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 2*time.Second)
+	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, shutdownTimeout)
 	defer shutdownCancel()
 
 	// Ожидаем завершения работы сервера с таймаутом

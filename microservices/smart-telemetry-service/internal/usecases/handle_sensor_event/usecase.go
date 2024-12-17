@@ -46,7 +46,7 @@ func (s *HandleSensorEventUsecase) HandleSensorEvents(ctx context.Context, event
 			}
 			storageSensorData, err := json.Marshal(data)
 			if err != nil {
-				return fmt.Errorf("encode sensor temperature data: %v", err)
+				return fmt.Errorf("encode sensor temperature data: %w", err)
 			}
 			stEvent.Data = storageSensorData
 		}
@@ -54,7 +54,7 @@ func (s *HandleSensorEventUsecase) HandleSensorEvents(ctx context.Context, event
 		storageEvents = append(storageEvents, stEvent)
 	}
 	if err := s.eventsStorage.SaveEvents(ctx, storageEvents); err != nil {
-		return fmt.Errorf("save events: %v", err)
+		return fmt.Errorf("save events: %w", err)
 	}
 
 	return nil

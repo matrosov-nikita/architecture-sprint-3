@@ -24,19 +24,19 @@ func (s *Storage) SaveEvents(ctx context.Context, events []dto.StorageEvent) err
 
 	tx, err := s.db.Begin()
 	if err != nil {
-		return fmt.Errorf("tx begin: %v", err)
+		return fmt.Errorf("tx begin: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }()
 
 	for _, e := range events {
 		_, err := tx.ExecContext(ctx, query, e.DeviceID, e.EventType, e.Data, e.OccuredOn)
 		if err != nil {
-			return fmt.Errorf("insert event to table: %v", err)
+			return fmt.Errorf("insert event to table: %w", err)
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("tx commit: %v", err)
+		return fmt.Errorf("tx commit: %w", err)
 	}
 
 	return nil

@@ -1,0 +1,134 @@
+issues:
+  max-same-issues: 0
+
+  exclude-rules:
+    - linters:
+        - lll
+      source: "// |smart-telemetry-service" # исключаем длинные комментарии и импорты
+    - linters:
+        - stylecheck
+      text: "ST1003:" # разрешаем символ подчеркивания в именах пакетов
+    - path: cmd/*
+      linters:
+        - forbidigo # разрешаем вывод в stdout/err в main
+        - wrapcheck # разрешаем возврат необернутых ошибок в main
+    - path: /*.go
+      linters:
+        - misspell
+      text: "managment"
+
+linters-settings:
+  exhaustive:
+    default-signifies-exhaustive: true
+
+  depguard:
+    rules:
+      main:
+        deny:
+          - pkg: github.com/pkg/errors
+            desc: Should be replaced by standard lib errors package
+
+  forbidigo:
+    forbid:
+      - 'errors\.Wrap'
+      - 'errors\.Cause'
+
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(smart-telemetry-service)
+
+  godox:
+    keywords:
+      - TODO
+
+  lll:
+    line-length: 130
+
+  mnd:
+    checks:
+      - argument
+      - case
+      - condition
+      - operation
+      - return
+      - assign
+
+  revive:
+    rules:
+      - name: context-as-argument
+        severity: warning
+        disabled: false
+        arguments:
+          - allowTypesBefore: "*testing.T" # https://go-review.googlesource.com/c/lint/+/145237
+
+  godot:
+    capital: true
+
+  gocognit:
+    min-complexity: 32
+
+  wrapcheck:
+    ignoreSigRegexps:
+      - (context.Context)
+      - errgroup.Group\).Wait()
+
+
+linters:
+  disable-all: true
+  enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - depguard
+    - durationcheck
+    - errcheck
+    - errchkjson
+    - errname
+    - exhaustive
+    - copyloopvar
+    - forbidigo
+    - forcetypeassert
+    - gci
+    - gochecknoinits
+    - goconst
+    - gocognit
+    - gocritic
+    - gocyclo
+    - godot
+    - godox
+    - gofmt
+    - goheader
+    - goimports
+    - gomoddirectives
+    - gomodguard
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - importas
+    - ineffassign
+    - lll
+    - makezero
+    - mnd
+    - nakedret
+    - nestif
+    - nilnil
+    - nolintlint
+    - nosprintfhostport
+    - prealloc
+    - predeclared
+    - promlinter
+    - revive
+    - rowserrcheck
+    - sqlclosecheck
+    - staticcheck
+    - stylecheck
+    - tenv
+    - thelper
+    - typecheck
+    - unconvert
+    - unused
+    - whitespace
+    - wrapcheck

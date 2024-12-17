@@ -33,11 +33,14 @@ type PublishStatus struct {
 }
 
 func (p *StatusChangedPublisher) PublishStatusChanged(ctx context.Context, deviceID int, status dto.DeviceStatus) error {
-	statusJSON, _ := json.Marshal(PublishStatus{DeviceID: deviceID, Name: status.Status})
+	statusJSON, err := json.Marshal(PublishStatus{DeviceID: deviceID, Name: status.Status})
+	if err != nil {
+		return fmt.Errorf("encode publish status: %w", err)
+	}
 	if err := p.kafkaWriter.WriteMessages(ctx, []kafka.Message{
 		{Value: statusJSON},
 	}...); err != nil {
-		return fmt.Errorf("write device status changed: %v", err)
+		return fmt.Errorf("write device status changed: %w", err)
 	}
 
 	return nil

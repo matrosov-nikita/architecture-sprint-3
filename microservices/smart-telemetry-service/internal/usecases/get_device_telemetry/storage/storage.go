@@ -25,7 +25,7 @@ func (s *Storage) GetEventsByDeviceID(ctx context.Context, deviceID int64) ([]st
 
 	rows, err := s.db.QueryContext(ctx, query, deviceID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute query: %v", err)
+		return nil, fmt.Errorf("failed to execute query: %w", err)
 	}
 	defer rows.Close()
 
@@ -35,14 +35,14 @@ func (s *Storage) GetEventsByDeviceID(ctx context.Context, deviceID int64) ([]st
 
 		err := rows.Scan(&event.ID, &event.DeviceID, &event.EventType, &event.Data, &event.OccuredOn)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan row: %v", err)
+			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 
 		events = append(events, event)
 	}
 
 	if rows.Err() != nil {
-		return nil, fmt.Errorf("row iteration error: %v", rows.Err())
+		return nil, fmt.Errorf("row iteration error: %w", rows.Err())
 	}
 
 	return events, nil

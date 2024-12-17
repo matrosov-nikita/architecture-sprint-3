@@ -36,7 +36,7 @@ func (s *GetEventsUsecase) GetEventsByDeviceID(ctx context.Context, deviceID int
 	storageEvents, err := s.eventsStorage.GetEventsByDeviceID(ctx, deviceID)
 
 	if err != nil {
-		return nil, fmt.Errorf("get events by device id: %v", err)
+		return nil, fmt.Errorf("get events by device id: %w", err)
 	}
 
 	for _, event := range storageEvents {

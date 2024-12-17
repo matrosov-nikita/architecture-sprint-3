@@ -28,7 +28,7 @@ func (h *Handler) Handle(c *gin.Context) {
 
 	deviceID, err := strconv.Atoi(paramDeviceID)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "Invalid device ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid device ID"})
 		return
 	}
 
